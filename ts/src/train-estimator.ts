@@ -10,45 +10,52 @@ export class TrainTicketEstimator {
     throw new Error('Should not be call from a test');
   }
 
-  async estimate(trainDetails: TripRequest): Promise<number> {
-    if (trainDetails.passengers.length === 0) {
+  validTripRequestInput(tripRequest: TripRequest) {
+    if (tripRequest.passengers.length === 0) {
       return 0;
     }
 
-    if (trainDetails.details.from.trim().length === 0) {
+    if (tripRequest.details.from.trim().length === 0) {
       throw new InvalidTripInputException('Start city is invalid');
     }
 
-    if (trainDetails.details.to.trim().length === 0) {
+    if (tripRequest.details.to.trim().length === 0) {
       throw new InvalidTripInputException('Destination city is invalid');
     }
 
     if (
-      trainDetails.details.when <
+      tripRequest.details.when <
       new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDay(), 0, 0, 0)
     ) {
       throw new InvalidTripInputException('Date is invalid');
     }
 
+    tripRequest.passengers.forEach((passenger) => {
+      if (passenger.age < 0) {
+        throw new InvalidTripInputException('Age is invalid');
+      }
+    });
+  }
+
+  async estimate(tripRequest: TripRequest): Promise<number> {
+    this.validTripRequestInput(tripRequest);
+
     // TODO USE THIS LINE AT THE END
     let b;
     try {
       b = await this.getPriceFromApi(
-        trainDetails.details.from,
-        trainDetails.details.to,
-        trainDetails.details.when
+        tripRequest.details.from,
+        tripRequest.details.to,
+        tripRequest.details.when
       );
     } catch (error) {
       throw new ApiException();
     }
 
-    const passengers = trainDetails.passengers;
+    const passengers = tripRequest.passengers;
     let tot = 0;
     let tmp = b;
     for (let i = 0; i < passengers.length; i++) {
-      if (passengers[i].age < 0) {
-        throw new InvalidTripInputException('Age is invalid');
-      }
       if (passengers[i].age < 1) {
         continue;
       }
@@ -65,10 +72,10 @@ export class TrainTicketEstimator {
       }
 
       const d = new Date();
-      if (trainDetails.details.when.getTime() >= d.setDate(d.getDate() + 30)) {
+      if (tripRequest.details.when.getTime() >= d.setDate(d.getDate() + 30)) {
         tmp -= b * 0.2;
-      } else if (trainDetails.details.when.getTime() > d.setDate(d.getDate() - 30 + 5)) {
-        const date1 = trainDetails.details.when;
+      } else if (tripRequest.details.when.getTime() > d.setDate(d.getDate() - 30 + 5)) {
+        const date1 = tripRequest.details.when;
         const date2 = new Date();
         //https://stackoverflow.com/questions/43735678/typescript-get-difference-between-two-dates-in-days
         const diff = Math.abs(date1.getTime() - date2.getTime());
