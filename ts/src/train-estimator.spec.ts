@@ -15,10 +15,20 @@ class TrainTicketEstimatorOverload extends TrainTicketEstimator {
 describe('train estimator', function () {
   let alice: Passenger;
   let trainTicketEstimator: TrainTicketEstimatorOverload;
+  const date: Date = new Date();
 
   beforeAll(() => {
     alice = new Passenger(20, []);
     trainTicketEstimator = new TrainTicketEstimatorOverload();
+    date.setDate(date.getDay() + 20);
+  });
+
+  it('should return 0 for a less than 1 year old passenger', async () => {
+    const passenger = new Passenger(0, []);
+    const tripDetails: TripDetails = new TripDetails('Marseille', 'Paris', date);
+    const tripRequest: TripRequest = new TripRequest(tripDetails, [passenger]);
+
+    expect(await trainTicketEstimator.estimate(tripRequest)).toBe(0);
   });
 
   it('should return an exception when start city is invalid', async function () {
@@ -58,5 +68,7 @@ describe('train estimator', function () {
     const tripRequest = new TripRequest(tripDetails, []);
     const result = await trainTicketEstimator.estimate(tripRequest);
     expect(result).toBe(0);
+    let trainEstimator: TrainTicketEstimatorOverload;
+    const date: Date = new Date();
   });
 });
