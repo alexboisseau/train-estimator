@@ -40,10 +40,9 @@ export class TrainTicketEstimator {
   async estimate(tripRequest: TripRequest): Promise<number> {
     this.validTripRequestInput(tripRequest);
 
-    // TODO USE THIS LINE AT THE END
-    let b;
+    let basePrice;
     try {
-      b = await this.getPriceFromApi(
+      basePrice = await this.getPriceFromApi(
         tripRequest.details.from,
         tripRequest.details.to,
         tripRequest.details.when
@@ -53,37 +52,36 @@ export class TrainTicketEstimator {
     }
 
     const passengers = tripRequest.passengers;
-    let tot = 0;
-    let tmp = b;
+    let totalPrice = 0;
+    let tmp = basePrice;
     for (let i = 0; i < passengers.length; i++) {
       if (passengers[i].age < 1) {
         continue;
-      }
-      // Seniors
-      else if (passengers[i].age <= 17) {
-        tmp = b * 0.6;
+      } else if (passengers[i].age <= 17) {
+        tmp = basePrice * 0.6;
       } else if (passengers[i].age >= 70) {
-        tmp = b * 0.8;
+        tmp = basePrice * 0.8;
         if (passengers[i].discounts.includes(DiscountCard.Senior)) {
-          tmp -= b * 0.2;
+          tmp -= basePrice * 0.2;
         }
       } else {
-        tmp = b * 1.2;
+        tmp = basePrice * 1.2;
       }
 
-      const d = new Date();
-      if (tripRequest.details.when.getTime() >= d.setDate(d.getDate() + 30)) {
-        tmp -= b * 0.2;
-      } else if (tripRequest.details.when.getTime() > d.setDate(d.getDate() - 30 + 5)) {
-        const date1 = tripRequest.details.when;
-        const date2 = new Date();
+      const currentDate = new Date();
+      if (tripRequest.details.when.getTime() >= currentDate.setDate(currentDate.getDate() + 30)) {
+        tmp -= basePrice * 0.2;
+      } else if (
+        tripRequest.details.when.getTime() > currentDate.setDate(currentDate.getDate() - 30 + 5)
+      ) {
         //https://stackoverflow.com/questions/43735678/typescript-get-difference-between-two-dates-in-days
-        const diff = Math.abs(date1.getTime() - date2.getTime());
-        const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+        const differenceBetweenRequestedDateAndTodayInDays = Math.ceil(
+          Math.abs(tripRequest.details.when.getTime() - currentDate.getTime() / (1000 * 3600 * 24))
+        );
 
-        tmp += (20 - diffDays) * 0.02 * b; // I tried. it works. I don't know why.
+        tmp += (20 - differenceBetweenRequestedDateAndTodayInDays) * 0.02 * basePrice; // I tried. it works. I don't know why.
       } else {
-        tmp += b;
+        tmp += basePrice;
       }
 
       if (passengers[i].age > 0 && passengers[i].age < 4) {
@@ -94,42 +92,42 @@ export class TrainTicketEstimator {
         tmp = 1;
       }
 
-      tot += tmp;
-      tmp = b;
+      totalPrice += tmp;
+      tmp = basePrice;
     }
 
     if (passengers.length == 2) {
-      let cp = false;
-      let mn = false;
+      let isCouple = false;
+      let isHalfCouple = false;
       for (let i = 0; i < passengers.length; i++) {
         if (passengers[i].discounts.includes(DiscountCard.Couple)) {
-          cp = true;
+          isCouple = true;
         }
         if (passengers[i].age < 18) {
-          mn = true;
+          isHalfCouple = true;
         }
       }
-      if (cp && !mn) {
-        tot -= b * 0.2 * 2;
+      if (isCouple && !isHalfCouple) {
+        totalPrice -= basePrice * 0.2 * 2;
       }
     }
 
     if (passengers.length == 1) {
-      let cp = false;
-      let mn = false;
+      let isCouple = false;
+      let isHalfCouple = false;
       for (let i = 0; i < passengers.length; i++) {
         if (passengers[i].discounts.includes(DiscountCard.HalfCouple)) {
-          cp = true;
+          isCouple = true;
         }
         if (passengers[i].age < 18) {
-          mn = true;
+          isHalfCouple = true;
         }
       }
-      if (cp && !mn) {
-        tot -= b * 0.1;
+      if (isCouple && !isHalfCouple) {
+        totalPrice -= basePrice * 0.1;
       }
     }
 
-    return tot;
+    return totalPrice;
   }
 }
