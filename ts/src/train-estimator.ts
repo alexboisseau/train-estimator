@@ -27,14 +27,18 @@ export class TrainTicketEstimator {
     }
 
     // TODO USE THIS LINE AT THE END
-    const b =
-      (
-        await (
-          await fetch(
-            `https://sncf.com/api/train/estimate/price?from=${trainDetails.details.from}&to=${trainDetails.details.to}&date=${trainDetails.details.when}`
-          )
-        ).json()
-      )?.price || -1;
+    let priceFromApiToJson;
+    try {
+      const priceFromApi = await fetch(
+        `https://sncf.com/api/train/estimate/price?from=${trainDetails.details.from}&to=${trainDetails.details.to}&date=${trainDetails.details.when}`
+      );
+
+      priceFromApiToJson = await priceFromApi.json();
+    } catch (error) {
+      priceFromApiToJson = {};
+    }
+
+    const b = priceFromApiToJson?.price || -1;
 
     if (b === -1) {
       throw new ApiException();
