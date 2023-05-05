@@ -68,7 +68,5 @@ describe('train estimator', function () {
     const tripRequest = new TripRequest(tripDetails, []);
     const result = await trainTicketEstimator.estimate(tripRequest);
     expect(result).toBe(0);
-    let trainEstimator: TrainTicketEstimatorOverload;
-    const date: Date = new Date();
   });
 });
