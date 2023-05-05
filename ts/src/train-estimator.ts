@@ -6,6 +6,10 @@ import {
 } from './model/trip.request';
 
 export class TrainTicketEstimator {
+  protected async getPriceFromApi(from: string, to: string, when: Date): Promise<number> {
+    throw new Error('Should not be call from a test');
+  }
+
   async estimate(trainDetails: TripRequest): Promise<number> {
     if (trainDetails.passengers.length === 0) {
       return 0;
@@ -27,20 +31,14 @@ export class TrainTicketEstimator {
     }
 
     // TODO USE THIS LINE AT THE END
-    let priceFromApiToJson;
+    let b;
     try {
-      const priceFromApi = await fetch(
-        `https://sncf.com/api/train/estimate/price?from=${trainDetails.details.from}&to=${trainDetails.details.to}&date=${trainDetails.details.when}`
+      b = await this.getPriceFromApi(
+        trainDetails.details.from,
+        trainDetails.details.to,
+        trainDetails.details.when
       );
-
-      priceFromApiToJson = await priceFromApi.json();
     } catch (error) {
-      priceFromApiToJson = {};
-    }
-
-    const b = priceFromApiToJson?.price || -1;
-
-    if (b === -1) {
       throw new ApiException();
     }
 
