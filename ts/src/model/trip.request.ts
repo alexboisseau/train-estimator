@@ -1,9 +1,11 @@
 export class Passenger {
-    constructor(readonly age: number, readonly discounts: DiscountCard[]){}
+    constructor(readonly age: number, readonly discounts: DiscountCard[]) {
+    }
 }
 
 export class TripRequest {
-    constructor(readonly details: TripDetails, readonly passengers: Passenger[]){}
+    constructor(readonly details: TripDetails, readonly passengers: Passenger[]) {
+    }
 }
 
 export class TripDetails {
@@ -25,7 +27,7 @@ export class ApiException extends Error {
 
 export enum DiscountCard {
     Senior = "Senior",
-    TrainStroke= "TrainStroke",
+    TrainStroke = "TrainStroke",
     Couple = "Couple",
     HalfCouple = "HalfCouple",
 }

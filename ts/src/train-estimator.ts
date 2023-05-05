@@ -20,55 +20,55 @@ export class TrainTicketEstimator {
         }
 
         // TODO USE THIS LINE AT THE END
-        const b = (await(await fetch(`https://sncf.com/api/train/estimate/price?from=${trainDetails.details.from}&to=${trainDetails.details.to}&date=${trainDetails.details.when}`)).json())?.price || -1;
+        const b = (await (await fetch(`https://sncf.com/api/train/estimate/price?from=${trainDetails.details.from}&to=${trainDetails.details.to}&date=${trainDetails.details.when}`)).json())?.price || -1;
 
         if (b === -1) {
             throw new ApiException();
         }
 
-        const pasngers = trainDetails.passengers;
+        const passengers = trainDetails.passengers;
         let tot = 0;
         let tmp = b;
-        for (let i=0;i<pasngers.length;i++) {
+        for (let i = 0; i < passengers.length; i++) {
 
-            if (pasngers[i].age < 0) {
+            if (passengers[i].age < 0) {
                 throw new InvalidTripInputException("Age is invalid");
             }
-            if (pasngers[i].age < 1) {
+            if (passengers[i].age < 1) {
                 tmp = 0;
             }
             // Seniors
-            else if (pasngers[i].age <= 17) {
-            tmp = b* 0.6;
-            } else if(pasngers[i].age >= 70) {
+            else if (passengers[i].age <= 17) {
+                tmp = b * 0.6;
+            } else if (passengers[i].age >= 70) {
                 tmp = b * 0.8;
-                if (pasngers[i].discounts.includes(DiscountCard.Senior)) {
+                if (passengers[i].discounts.includes(DiscountCard.Senior)) {
                     tmp -= b * 0.2;
                 }
             } else {
-                tmp = b*1.2;
+                tmp = b * 1.2;
             }
 
             const d = new Date();
-            if (trainDetails.details.when.getTime() >= d.setDate(d.getDate() +30)) {
+            if (trainDetails.details.when.getTime() >= d.setDate(d.getDate() + 30)) {
                 tmp -= b * 0.2;
-            } else if (trainDetails.details.when.getTime() > d.setDate(d.getDate() -30 + 5)) {
+            } else if (trainDetails.details.when.getTime() > d.setDate(d.getDate() - 30 + 5)) {
                 const date1 = trainDetails.details.when;
                 const date2 = new Date();
                 //https://stackoverflow.com/questions/43735678/typescript-get-difference-between-two-dates-in-days
-                var diff = Math.abs(date1.getTime() - date2.getTime());
-                var diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+                const diff = Math.abs(date1.getTime() - date2.getTime());
+                const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
 
                 tmp += (20 - diffDays) * 0.02 * b; // I tried. it works. I don't know why.
             } else {
                 tmp += b;
             }
 
-            if (pasngers[i].age > 0 && pasngers[i].age < 4) {
+            if (passengers[i].age > 0 && passengers[i].age < 4) {
                 tmp = 9;
             }
 
-            if (pasngers[i].discounts.includes(DiscountCard.TrainStroke)) {
+            if (passengers[i].discounts.includes(DiscountCard.TrainStroke)) {
                 tmp = 1;
             }
 
@@ -76,14 +76,14 @@ export class TrainTicketEstimator {
             tmp = b;
         }
 
-        if (pasngers.length == 2) {
+        if (passengers.length == 2) {
             let cp = false;
             let mn = false;
-            for (let i=0;i<pasngers.length;i++) {
-                if (pasngers[i].discounts.includes(DiscountCard.Couple)) {
+            for (let i = 0; i < passengers.length; i++) {
+                if (passengers[i].discounts.includes(DiscountCard.Couple)) {
                     cp = true;
                 }
-                if (pasngers[i].age < 18) {
+                if (passengers[i].age < 18) {
                     mn = true;
                 }
             }
@@ -92,14 +92,14 @@ export class TrainTicketEstimator {
             }
         }
 
-        if (pasngers.length == 1) {
+        if (passengers.length == 1) {
             let cp = false;
             let mn = false;
-            for (let i=0;i<pasngers.length;i++) {
-                if (pasngers[i].discounts.includes(DiscountCard.HalfCouple)) {
+            for (let i = 0; i < passengers.length; i++) {
+                if (passengers[i].discounts.includes(DiscountCard.HalfCouple)) {
                     cp = true;
                 }
-                if (pasngers[i].age < 18) {
+                if (passengers[i].age < 18) {
                     mn = true;
                 }
             }
