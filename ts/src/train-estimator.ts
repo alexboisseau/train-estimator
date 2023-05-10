@@ -8,6 +8,7 @@ import {
   DISCOUNT_FOR_FAMILY,
   DISCOUNT_FOR_TRIP_DATE_30_PLUS,
   DISCOUNT_FOR_TRIP_DATE_5_TO_30,
+  DISCOUNT_FOR_TRIP_DATE_IN_LESS_THAN_6H,
   PRICE_AGE_BETWEEN_1_AND_4_YEARS_OLD,
   PRICE_TRAIN_STROKE_DISCOUNT_CARD,
 } from './constants';
@@ -18,7 +19,7 @@ import {
   Passenger,
   TripRequest,
 } from './model/trip.request';
-import { calculateDaysDifference } from './utils';
+import { calculateDaysDifference, addHours } from './utils';
 
 export class TrainTicketEstimator {
   protected async getPriceFromApi(from: string, to: string, when: Date): Promise<number> {
@@ -54,13 +55,17 @@ export class TrainTicketEstimator {
 
   private getDiscountFromTripDate(tripDate: Date) {
     const currentDate = new Date();
+    const sixHoursAgo = addHours(currentDate, 6);
     const thirtyDaysFromNow = new Date(currentDate.setDate(currentDate.getDate() + 30));
     const fiveDaysAgo = new Date(currentDate.setDate(currentDate.getDate() - 30 + 5));
 
     if (tripDate >= thirtyDaysFromNow) return DISCOUNT_FOR_TRIP_DATE_30_PLUS;
-    else if (tripDate > fiveDaysAgo) {
+    if (tripDate > fiveDaysAgo && tripDate > sixHoursAgo) {
       const diffDays = calculateDaysDifference(tripDate, new Date());
       return (20 - diffDays) * DISCOUNT_FOR_TRIP_DATE_5_TO_30;
+    }
+    if (tripDate < fiveDaysAgo && tripDate <= sixHoursAgo) {
+      return DISCOUNT_FOR_TRIP_DATE_IN_LESS_THAN_6H;
     } else {
       return 1;
     }
