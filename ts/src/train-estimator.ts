@@ -25,7 +25,7 @@ export class TrainTicketEstimator {
 
     if (
       tripRequest.details.when <
-      new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDay(), 0, 0, 0)
+      new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 0, 0, 0)
     ) {
       throw new InvalidTripInputException('Date is invalid');
     }
@@ -68,18 +68,17 @@ export class TrainTicketEstimator {
         tmp = basePrice * 1.2;
       }
 
-      const currentDate = new Date();
-      if (tripRequest.details.when.getTime() >= currentDate.setDate(currentDate.getDate() + 30)) {
+      const d = new Date();
+      if (tripRequest.details.when.getTime() >= d.setDate(d.getDate() + 30)) {
         tmp -= basePrice * 0.2;
-      } else if (
-        tripRequest.details.when.getTime() > currentDate.setDate(currentDate.getDate() - 30 + 5)
-      ) {
+      } else if (tripRequest.details.when.getTime() > d.setDate(d.getDate() - 30 + 5)) {
+        const date1 = tripRequest.details.when;
+        const date2 = new Date();
         //https://stackoverflow.com/questions/43735678/typescript-get-difference-between-two-dates-in-days
-        const differenceBetweenRequestedDateAndTodayInDays = Math.ceil(
-          Math.abs(tripRequest.details.when.getTime() - currentDate.getTime() / (1000 * 3600 * 24))
-        );
+        const diff = Math.abs(date1.getTime() - date2.getTime());
+        const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
 
-        tmp += (20 - differenceBetweenRequestedDateAndTodayInDays) * 0.02 * basePrice; // I tried. it works. I don't know why.
+        tmp += (20 - diffDays) * 0.02 * basePrice; // I tried. it works. I don't know why.
       } else {
         tmp += basePrice;
       }
