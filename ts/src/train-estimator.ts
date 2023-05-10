@@ -10,7 +10,7 @@ export class TrainTicketEstimator {
     throw new Error('Should not be call from a test');
   }
 
-  validTripRequestInput(tripRequest: TripRequest) {
+  private validTripRequestInput(tripRequest: TripRequest) {
     if (tripRequest.passengers.length === 0) {
       return 0;
     }
@@ -37,7 +37,7 @@ export class TrainTicketEstimator {
     });
   }
 
-  getDiscountFromTripDate(tripDate: Date) {
+  private getDiscountFromTripDate(tripDate: Date) {
     const d = new Date();
     if (tripDate.getTime() >= d.setDate(d.getDate() + 30)) {
       return -0.2;
@@ -51,6 +51,16 @@ export class TrainTicketEstimator {
       return (20 - diffDays) * 0.02;
     } else {
       return 1;
+    }
+  }
+
+  private getDiscountFromAge(age: number) {
+    if (age <= 17) {
+      return -0.4;
+    } else if (age >= 70) {
+      return -0.2;
+    } else {
+      return 0.2;
     }
   }
 
@@ -70,33 +80,32 @@ export class TrainTicketEstimator {
 
     const passengers = tripRequest.passengers;
     let totalPrice = 0;
-    let tmp = basePrice;
+    let tmp;
     for (let i = 0; i < passengers.length; i++) {
-      if (passengers[i].age < 1) {
+      tmp = basePrice;
+      const currentPassenger = passengers[i];
+
+      if (currentPassenger.age < 1) continue;
+
+      const passengerIsBetween1And4YearsOld = currentPassenger.age > 0 && currentPassenger.age < 4;
+      const passengerHasTrainStroke = currentPassenger.discounts.includes(DiscountCard.TrainStroke);
+
+      if (passengerIsBetween1And4YearsOld || passengerHasTrainStroke) {
+        tmp = passengerIsBetween1And4YearsOld ? 9 : 1;
+        totalPrice += tmp;
         continue;
-      } else if (passengers[i].age <= 17) {
-        tmp = basePrice * 0.6;
-      } else if (passengers[i].age >= 70) {
-        tmp = basePrice * 0.8;
-        if (passengers[i].discounts.includes(DiscountCard.Senior)) {
-          tmp -= basePrice * 0.2;
-        }
-      } else {
-        tmp = basePrice * 1.2;
       }
 
-      tmp += this.getDiscountFromTripDate(tripRequest.details.when) * basePrice;
+      const discountForAge = this.getDiscountFromAge(currentPassenger.age);
+      const discountForDate = this.getDiscountFromTripDate(tripRequest.details.when);
 
-      if (passengers[i].age > 0 && passengers[i].age < 4) {
-        tmp = 9;
-      }
+      tmp += basePrice * discountForAge + basePrice * discountForDate;
 
-      if (passengers[i].discounts.includes(DiscountCard.TrainStroke)) {
-        tmp = 1;
+      if (currentPassenger.discounts.includes(DiscountCard.Senior)) {
+        tmp -= basePrice * 0.2;
       }
 
       totalPrice += tmp;
-      tmp = basePrice;
     }
 
     if (passengers.length == 2) {
