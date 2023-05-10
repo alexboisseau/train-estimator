@@ -7,6 +7,8 @@ import {
   TripRequest,
 } from './model/trip.request';
 
+import { addHours } from './utils';
+
 const BASE_PRICE = 50;
 
 class TrainTicketEstimatorOverload extends TrainTicketEstimator {
@@ -133,7 +135,7 @@ describe('train estimator', function () {
     it('should apply 110% of augmentation (20years old (+20%), trip in 5 days (+100%), Hald coupe discount (-10%))', async function () {
       const currentDate = new Date();
       const tripDate = new Date();
-      tripDate.setDate(currentDate.getDate() + 5);
+      tripDate.setDate(currentDate.getDate() + 4);
 
       const passenger = new Passenger(20, [DiscountCard.HalfCouple]);
       const tripDetails: TripDetails = new TripDetails('Marseille', 'Paris', tripDate);
@@ -177,6 +179,19 @@ describe('train estimator', function () {
         BASE_PRICE +
         BASE_PRICE * 0.2 -
         BASE_PRICE * 0.2;
+      expect(await trainTicketEstimator.estimate(tripRequest)).toBe(expectedResult);
+    });
+
+    it('should apply 20% of reduction (trip in 6 hours) and 20% of augmentation (passenger age > 18)', async function () {
+      const currentDate = new Date();
+      const tripDate = addHours(currentDate, 6);
+
+      const tom = new Passenger(25, []);
+      const tripDetails: TripDetails = new TripDetails('Marseille', 'Paris', tripDate);
+
+      const tripRequest: TripRequest = new TripRequest(tripDetails, [tom]);
+
+      const expectedResult = BASE_PRICE - BASE_PRICE * 0.2 + BASE_PRICE * 0.2;
       expect(await trainTicketEstimator.estimate(tripRequest)).toBe(expectedResult);
     });
   });
