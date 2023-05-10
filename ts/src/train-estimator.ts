@@ -83,7 +83,6 @@ export class TrainTicketEstimator {
           passengerInTheList.discounts.includes(DiscountCard.Family) &&
           passengerInTheList.lastName === passenger.lastName
       );
-      console.log(hasFamilyDiscoutCard);
       if (hasFamilyDiscoutCard) {
         return -0.3;
       }
