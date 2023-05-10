@@ -173,7 +173,7 @@ describe('train estimator', function () {
       const tripRequest: TripRequest = new TripRequest(tripDetails, [tom, lala, jaq]);
 
       const expectedResult =
-        (BASE_PRICE - BASE_PRICE * 0.3 + BASE_PRICE * 0.2) * 2 +
+        (BASE_PRICE - BASE_PRICE * 0.3 + BASE_PRICE * 0.2 - BASE_PRICE * 0.2) * 2 +
         BASE_PRICE +
         BASE_PRICE * 0.2 -
         BASE_PRICE * 0.2;
