@@ -17,6 +17,7 @@ import {
   Passenger,
   TripRequest,
 } from './model/trip.request';
+import { calculateDaysDifference } from './utils';
 
 export class TrainTicketEstimator {
   protected async getPriceFromApi(from: string, to: string, when: Date): Promise<number> {
@@ -51,15 +52,13 @@ export class TrainTicketEstimator {
   }
 
   private getDiscountFromTripDate(tripDate: Date) {
-    const d = new Date();
-    if (tripDate.getTime() >= d.setDate(d.getDate() + 30)) return DISCOUNT_FOR_TRIP_DATE_30_PLUS;
-    else if (tripDate.getTime() > d.setDate(d.getDate() - 30 + 5)) {
-      const date1 = tripDate;
-      const date2 = new Date();
-      //https://stackoverflow.com/questions/43735678/typescript-get-difference-between-two-dates-in-days
-      const diff = Math.abs(date1.getTime() - date2.getTime());
-      const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+    const currentDate = new Date();
+    const thirtyDaysFromNow = new Date(currentDate.setDate(currentDate.getDate() + 30));
+    const fiveDaysAgo = new Date(currentDate.setDate(currentDate.getDate() - 30 + 5));
 
+    if (tripDate >= thirtyDaysFromNow) return DISCOUNT_FOR_TRIP_DATE_30_PLUS;
+    else if (tripDate > fiveDaysAgo) {
+      const diffDays = calculateDaysDifference(tripDate, new Date());
       return (20 - diffDays) * DISCOUNT_FOR_TRIP_DATE_5_TO_30;
     } else {
       return 1;
