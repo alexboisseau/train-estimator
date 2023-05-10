@@ -159,5 +159,25 @@ describe('train estimator', function () {
         (BASE_PRICE - BASE_PRICE * 0.2 - BASE_PRICE * 0.2 - BASE_PRICE * 0.2) * 2;
       expect(await trainTicketEstimator.estimate(tripRequest)).toBe(expectedResult);
     });
+
+    it('should apply 30% of reduction only if last name is given and the last name is the same one (Family discount)', async function () {
+      const currentDate = new Date();
+      const tripDate = new Date();
+      tripDate.setDate(currentDate.getDate() + 30);
+
+      const tom = new Passenger(25, [DiscountCard.Family], 'Dupont');
+      const lala = new Passenger(24, [], 'Dupont');
+      const jaq = new Passenger(22, []);
+      const tripDetails: TripDetails = new TripDetails('Marseille', 'Paris', tripDate);
+
+      const tripRequest: TripRequest = new TripRequest(tripDetails, [tom, lala, jaq]);
+
+      const expectedResult =
+        (BASE_PRICE - BASE_PRICE * 0.3 + BASE_PRICE * 0.2) * 2 +
+        BASE_PRICE +
+        BASE_PRICE * 0.2 -
+        BASE_PRICE * 0.2;
+      expect(await trainTicketEstimator.estimate(tripRequest)).toBe(expectedResult);
+    });
   });
 });
