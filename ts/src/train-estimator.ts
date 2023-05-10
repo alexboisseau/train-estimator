@@ -1,4 +1,15 @@
-import { PRICE_AGE_BETWEEN_1_AND_4_YEARS_OLD, PRICE_TRAIN_STROKE_DISCOUNT_CARD } from './constants';
+import {
+  DISCOUNT_FOR_AGE_OTHER,
+  DISCOUNT_FOR_AGE_OVER_70,
+  DISCOUNT_FOR_AGE_UNDER_17,
+  DISCOUNT_FOR_COUPLE,
+  DISCOUNT_FOR_HALF_COUPLE,
+  DISCOUNT_FOR_SENIOR,
+  DISCOUNT_FOR_TRIP_DATE_30_PLUS,
+  DISCOUNT_FOR_TRIP_DATE_5_TO_30,
+  PRICE_AGE_BETWEEN_1_AND_4_YEARS_OLD,
+  PRICE_TRAIN_STROKE_DISCOUNT_CARD,
+} from './constants';
 import {
   ApiException,
   DiscountCard,
@@ -41,16 +52,15 @@ export class TrainTicketEstimator {
 
   private getDiscountFromTripDate(tripDate: Date) {
     const d = new Date();
-    if (tripDate.getTime() >= d.setDate(d.getDate() + 30)) {
-      return -0.2;
-    } else if (tripDate.getTime() > d.setDate(d.getDate() - 30 + 5)) {
+    if (tripDate.getTime() >= d.setDate(d.getDate() + 30)) return DISCOUNT_FOR_TRIP_DATE_30_PLUS;
+    else if (tripDate.getTime() > d.setDate(d.getDate() - 30 + 5)) {
       const date1 = tripDate;
       const date2 = new Date();
       //https://stackoverflow.com/questions/43735678/typescript-get-difference-between-two-dates-in-days
       const diff = Math.abs(date1.getTime() - date2.getTime());
       const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
 
-      return (20 - diffDays) * 0.02;
+      return (20 - diffDays) * DISCOUNT_FOR_TRIP_DATE_5_TO_30;
     } else {
       return 1;
     }
@@ -58,11 +68,11 @@ export class TrainTicketEstimator {
 
   private getDiscountFromAge(age: number) {
     if (age <= 17) {
-      return -0.4;
+      return DISCOUNT_FOR_AGE_UNDER_17;
     } else if (age >= 70) {
-      return -0.2;
+      return DISCOUNT_FOR_AGE_OVER_70;
     } else {
-      return 0.2;
+      return DISCOUNT_FOR_AGE_OTHER;
     }
   }
 
@@ -70,7 +80,7 @@ export class TrainTicketEstimator {
     let totalDiscount = 0;
 
     if (passenger.discounts.includes(DiscountCard.Senior) && passenger.age >= 70) {
-      totalDiscount += -0.2;
+      totalDiscount += DISCOUNT_FOR_SENIOR;
     }
 
     if (passengers.length == 2) {
@@ -79,7 +89,7 @@ export class TrainTicketEstimator {
       );
       const areMajors = passengers.every((p) => p.age >= 18);
 
-      if (hasCoupleDiscoutCard && areMajors) totalDiscount += -0.2;
+      if (hasCoupleDiscoutCard && areMajors) totalDiscount += DISCOUNT_FOR_COUPLE;
     }
 
     if (
@@ -87,7 +97,7 @@ export class TrainTicketEstimator {
       passenger.discounts.includes(DiscountCard.HalfCouple) &&
       passenger.age > 18
     ) {
-      totalDiscount += -0.1;
+      totalDiscount += DISCOUNT_FOR_HALF_COUPLE;
     }
 
     return totalDiscount;
@@ -110,6 +120,7 @@ export class TrainTicketEstimator {
     const passengers = tripRequest.passengers;
     let totalPrice = 0;
     let tmp;
+
     for (let i = 0; i < passengers.length; i++) {
       tmp = basePrice;
       const currentPassenger = passengers[i];
