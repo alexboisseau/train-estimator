@@ -1,7 +1,9 @@
+import { PRICE_AGE_BETWEEN_1_AND_4_YEARS_OLD, PRICE_TRAIN_STROKE_DISCOUNT_CARD } from './constants';
 import {
   ApiException,
   DiscountCard,
   InvalidTripInputException,
+  Passenger,
   TripRequest,
 } from './model/trip.request';
 
@@ -64,6 +66,33 @@ export class TrainTicketEstimator {
     }
   }
 
+  private getDiscountFromDiscountCard(passenger: Passenger, passengers: Passenger[]) {
+    let totalDiscount = 0;
+
+    if (passenger.discounts.includes(DiscountCard.Senior) && passenger.age >= 70) {
+      totalDiscount += -0.2;
+    }
+
+    if (passengers.length == 2) {
+      const hasCoupleDiscoutCard = passengers.some((p) =>
+        p.discounts.includes(DiscountCard.Couple)
+      );
+      const areMajors = passengers.every((p) => p.age >= 18);
+
+      if (hasCoupleDiscoutCard && areMajors) totalDiscount += -0.2;
+    }
+
+    if (
+      passengers.length == 1 &&
+      passenger.discounts.includes(DiscountCard.HalfCouple) &&
+      passenger.age > 18
+    ) {
+      totalDiscount += -0.1;
+    }
+
+    return totalDiscount;
+  }
+
   async estimate(tripRequest: TripRequest): Promise<number> {
     this.validTripRequestInput(tripRequest);
 
@@ -91,53 +120,25 @@ export class TrainTicketEstimator {
       const passengerHasTrainStroke = currentPassenger.discounts.includes(DiscountCard.TrainStroke);
 
       if (passengerIsBetween1And4YearsOld || passengerHasTrainStroke) {
-        tmp = passengerIsBetween1And4YearsOld ? 9 : 1;
+        tmp = passengerIsBetween1And4YearsOld
+          ? PRICE_AGE_BETWEEN_1_AND_4_YEARS_OLD
+          : PRICE_TRAIN_STROKE_DISCOUNT_CARD;
         totalPrice += tmp;
         continue;
       }
 
       const discountForAge = this.getDiscountFromAge(currentPassenger.age);
       const discountForDate = this.getDiscountFromTripDate(tripRequest.details.when);
+      const discountForDiscountCard = this.getDiscountFromDiscountCard(
+        currentPassenger,
+        passengers
+      );
 
-      tmp += basePrice * discountForAge + basePrice * discountForDate;
-
-      if (currentPassenger.discounts.includes(DiscountCard.Senior)) {
-        tmp -= basePrice * 0.2;
-      }
-
+      tmp +=
+        basePrice * discountForAge +
+        basePrice * discountForDate +
+        basePrice * discountForDiscountCard;
       totalPrice += tmp;
-    }
-
-    if (passengers.length == 2) {
-      let isCouple = false;
-      let isHalfCouple = false;
-      for (let i = 0; i < passengers.length; i++) {
-        if (passengers[i].discounts.includes(DiscountCard.Couple)) {
-          isCouple = true;
-        }
-        if (passengers[i].age < 18) {
-          isHalfCouple = true;
-        }
-      }
-      if (isCouple && !isHalfCouple) {
-        totalPrice -= basePrice * 0.2 * 2;
-      }
-    }
-
-    if (passengers.length == 1) {
-      let isCouple = false;
-      let isHalfCouple = false;
-      for (let i = 0; i < passengers.length; i++) {
-        if (passengers[i].discounts.includes(DiscountCard.HalfCouple)) {
-          isCouple = true;
-        }
-        if (passengers[i].age < 18) {
-          isHalfCouple = true;
-        }
-      }
-      if (isCouple && !isHalfCouple) {
-        totalPrice -= basePrice * 0.1;
-      }
     }
 
     return totalPrice;
