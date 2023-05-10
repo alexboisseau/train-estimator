@@ -77,6 +77,17 @@ export class TrainTicketEstimator {
 
   private getDiscountFromDiscountCard(passenger: Passenger, passengers: Passenger[]) {
     let totalDiscount = 0;
+    if (passenger.lastName) {
+      const hasFamilyDiscoutCard = passengers.some(
+        (passengerInTheList) =>
+          passengerInTheList.discounts.includes(DiscountCard.Family) &&
+          passengerInTheList.lastName === passenger.lastName
+      );
+      console.log(hasFamilyDiscoutCard);
+      if (hasFamilyDiscoutCard) {
+        return -0.3;
+      }
+    }
 
     if (passenger.discounts.includes(DiscountCard.Senior) && passenger.age >= 70) {
       totalDiscount += DISCOUNT_FOR_SENIOR;
