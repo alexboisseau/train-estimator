@@ -37,10 +37,27 @@ export class TrainTicketEstimator {
     });
   }
 
+  getDiscountFromTripDate(tripDate: Date) {
+    const d = new Date();
+    if (tripDate.getTime() >= d.setDate(d.getDate() + 30)) {
+      return -0.2;
+    } else if (tripDate.getTime() > d.setDate(d.getDate() - 30 + 5)) {
+      const date1 = tripDate;
+      const date2 = new Date();
+      //https://stackoverflow.com/questions/43735678/typescript-get-difference-between-two-dates-in-days
+      const diff = Math.abs(date1.getTime() - date2.getTime());
+      const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+
+      return (20 - diffDays) * 0.02;
+    } else {
+      return 1;
+    }
+  }
+
   async estimate(tripRequest: TripRequest): Promise<number> {
     this.validTripRequestInput(tripRequest);
 
-    let basePrice;
+    let basePrice: number;
     try {
       basePrice = await this.getPriceFromApi(
         tripRequest.details.from,
@@ -68,20 +85,7 @@ export class TrainTicketEstimator {
         tmp = basePrice * 1.2;
       }
 
-      const d = new Date();
-      if (tripRequest.details.when.getTime() >= d.setDate(d.getDate() + 30)) {
-        tmp -= basePrice * 0.2;
-      } else if (tripRequest.details.when.getTime() > d.setDate(d.getDate() - 30 + 5)) {
-        const date1 = tripRequest.details.when;
-        const date2 = new Date();
-        //https://stackoverflow.com/questions/43735678/typescript-get-difference-between-two-dates-in-days
-        const diff = Math.abs(date1.getTime() - date2.getTime());
-        const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
-
-        tmp += (20 - diffDays) * 0.02 * basePrice; // I tried. it works. I don't know why.
-      } else {
-        tmp += basePrice;
-      }
+      tmp += this.getDiscountFromTripDate(tripRequest.details.when) * basePrice;
 
       if (passengers[i].age > 0 && passengers[i].age < 4) {
         tmp = 9;
