@@ -5,6 +5,7 @@ import {
   DISCOUNT_FOR_COUPLE,
   DISCOUNT_FOR_HALF_COUPLE,
   DISCOUNT_FOR_SENIOR,
+  DISCOUNT_FOR_FAMILY,
   DISCOUNT_FOR_TRIP_DATE_30_PLUS,
   DISCOUNT_FOR_TRIP_DATE_5_TO_30,
   PRICE_AGE_BETWEEN_1_AND_4_YEARS_OLD,
@@ -77,6 +78,16 @@ export class TrainTicketEstimator {
 
   private getDiscountFromDiscountCard(passenger: Passenger, passengers: Passenger[]) {
     let totalDiscount = 0;
+    if (passenger.lastName) {
+      const hasFamilyDiscoutCard = passengers.some(
+        (passengerInTheList) =>
+          passengerInTheList.discounts.includes(DiscountCard.Family) &&
+          passengerInTheList.lastName === passenger.lastName
+      );
+      if (hasFamilyDiscoutCard) {
+        return DISCOUNT_FOR_FAMILY;
+      }
+    }
 
     if (passenger.discounts.includes(DiscountCard.Senior) && passenger.age >= 70) {
       totalDiscount += DISCOUNT_FOR_SENIOR;

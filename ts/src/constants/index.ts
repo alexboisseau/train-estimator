@@ -9,3 +9,4 @@ export const DISCOUNT_FOR_TRIP_DATE_5_TO_30 = 0.02;
 export const DISCOUNT_FOR_HALF_COUPLE = -0.1;
 export const DISCOUNT_FOR_COUPLE = -0.2;
 export const DISCOUNT_FOR_SENIOR = -0.2;
+export const DISCOUNT_FOR_FAMILY = -0.3;
