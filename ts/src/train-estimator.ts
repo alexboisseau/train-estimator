@@ -3,9 +3,9 @@ import {
   DISCOUNT_FOR_AGE_OVER_70,
   DISCOUNT_FOR_AGE_UNDER_17,
   DISCOUNT_FOR_COUPLE,
+  DISCOUNT_FOR_FAMILY,
   DISCOUNT_FOR_HALF_COUPLE,
   DISCOUNT_FOR_SENIOR,
-  DISCOUNT_FOR_FAMILY,
   DISCOUNT_FOR_TRIP_DATE_30_PLUS,
   DISCOUNT_FOR_TRIP_DATE_5_TO_30,
   DISCOUNT_FOR_TRIP_DATE_IN_LESS_THAN_6H,
@@ -19,27 +19,83 @@ import {
   Passenger,
   TripRequest,
 } from './model/trip.request';
-import { calculateDaysDifference, addHours } from './utils';
+import { addHours, calculateDaysDifference } from './utils';
 
 export class TrainTicketEstimator {
+  async estimate(tripRequest: TripRequest): Promise<number> {
+    this.validTripRequestInput(tripRequest);
+
+    let basePrice: number;
+    try {
+      basePrice = await this.getPriceFromApi(
+        tripRequest.details.from,
+        tripRequest.details.to,
+        tripRequest.details.when
+      );
+    } catch (error) {
+      throw new ApiException();
+    }
+
+    const passengers = tripRequest.passengers;
+    let totalPrice = 0;
+
+    totalPrice = this.getTotalPriceForPassengers(passengers, basePrice, totalPrice, tripRequest);
+
+    return totalPrice;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected async getPriceFromApi(from: string, to: string, when: Date): Promise<number> {
     throw new Error('Should not be call from a test');
+  }
+
+  private getTotalPriceForPassengers(
+    passengers: Passenger[],
+    basePrice: number,
+    totalPrice: number,
+    tripRequest: TripRequest
+  ) {
+    for (let i = 0; i < passengers.length; i++) {
+      let tmp = basePrice;
+      const currentPassenger = passengers[i];
+
+      if (currentPassenger.age < 1) continue;
+
+      const passengerIsBetween1And4YearsOld = currentPassenger.age > 0 && currentPassenger.age < 4;
+      const passengerHasTrainStroke = currentPassenger.discounts.includes(DiscountCard.TrainStroke);
+
+      if (passengerIsBetween1And4YearsOld || passengerHasTrainStroke) {
+        tmp = passengerIsBetween1And4YearsOld
+          ? PRICE_AGE_BETWEEN_1_AND_4_YEARS_OLD
+          : PRICE_TRAIN_STROKE_DISCOUNT_CARD;
+        totalPrice += tmp;
+        continue;
+      }
+
+      const discountForAge = this.getDiscountFromAge(currentPassenger.age);
+      const discountForDate = this.getDiscountFromTripDate(tripRequest.details.when);
+      const discountForDiscountCard = this.getDiscountFromDiscountCard(
+        currentPassenger,
+        passengers
+      );
+
+      tmp +=
+        basePrice * discountForAge +
+        basePrice * discountForDate +
+        basePrice * discountForDiscountCard;
+      totalPrice += tmp;
+    }
+    return totalPrice;
   }
 
   private validTripRequestInput(tripRequest: TripRequest) {
     if (tripRequest.passengers.length === 0) {
       return 0;
-    }
-
-    if (tripRequest.details.from.trim().length === 0) {
+    } else if (tripRequest.details.from.trim().length === 0) {
       throw new InvalidTripInputException('Start city is invalid');
-    }
-
-    if (tripRequest.details.to.trim().length === 0) {
+    } else if (tripRequest.details.to.trim().length === 0) {
       throw new InvalidTripInputException('Destination city is invalid');
-    }
-
-    if (
+    } else if (
       tripRequest.details.when <
       new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 0, 0, 0)
     ) {
@@ -84,12 +140,12 @@ export class TrainTicketEstimator {
   private getDiscountFromDiscountCard(passenger: Passenger, passengers: Passenger[]) {
     let totalDiscount = 0;
     if (passenger.lastName) {
-      const hasFamilyDiscoutCard = passengers.some(
+      const hasFamilyDiscountCard = passengers.some(
         (passengerInTheList) =>
           passengerInTheList.discounts.includes(DiscountCard.Family) &&
           passengerInTheList.lastName === passenger.lastName
       );
-      if (hasFamilyDiscoutCard) {
+      if (hasFamilyDiscountCard) {
         return DISCOUNT_FOR_FAMILY;
       }
     }
@@ -99,12 +155,12 @@ export class TrainTicketEstimator {
     }
 
     if (passengers.length == 2) {
-      const hasCoupleDiscoutCard = passengers.some((p) =>
+      const hasCoupleDiscountCard = passengers.some((p) =>
         p.discounts.includes(DiscountCard.Couple)
       );
       const areMajors = passengers.every((p) => p.age >= 18);
 
-      if (hasCoupleDiscoutCard && areMajors) totalDiscount += DISCOUNT_FOR_COUPLE;
+      if (hasCoupleDiscountCard && areMajors) totalDiscount += DISCOUNT_FOR_COUPLE;
     }
 
     if (
@@ -116,57 +172,5 @@ export class TrainTicketEstimator {
     }
 
     return totalDiscount;
-  }
-
-  async estimate(tripRequest: TripRequest): Promise<number> {
-    this.validTripRequestInput(tripRequest);
-
-    let basePrice: number;
-    try {
-      basePrice = await this.getPriceFromApi(
-        tripRequest.details.from,
-        tripRequest.details.to,
-        tripRequest.details.when
-      );
-    } catch (error) {
-      throw new ApiException();
-    }
-
-    const passengers = tripRequest.passengers;
-    let totalPrice = 0;
-    let tmp;
-
-    for (let i = 0; i < passengers.length; i++) {
-      tmp = basePrice;
-      const currentPassenger = passengers[i];
-
-      if (currentPassenger.age < 1) continue;
-
-      const passengerIsBetween1And4YearsOld = currentPassenger.age > 0 && currentPassenger.age < 4;
-      const passengerHasTrainStroke = currentPassenger.discounts.includes(DiscountCard.TrainStroke);
-
-      if (passengerIsBetween1And4YearsOld || passengerHasTrainStroke) {
-        tmp = passengerIsBetween1And4YearsOld
-          ? PRICE_AGE_BETWEEN_1_AND_4_YEARS_OLD
-          : PRICE_TRAIN_STROKE_DISCOUNT_CARD;
-        totalPrice += tmp;
-        continue;
-      }
-
-      const discountForAge = this.getDiscountFromAge(currentPassenger.age);
-      const discountForDate = this.getDiscountFromTripDate(tripRequest.details.when);
-      const discountForDiscountCard = this.getDiscountFromDiscountCard(
-        currentPassenger,
-        passengers
-      );
-
-      tmp +=
-        basePrice * discountForAge +
-        basePrice * discountForDate +
-        basePrice * discountForDiscountCard;
-      totalPrice += tmp;
-    }
-
-    return totalPrice;
   }
 }
