@@ -1,16 +1,30 @@
 import {
+  DISCOUNT_FOR_AGE_OTHER,
+  DISCOUNT_FOR_AGE_OVER_70,
+  DISCOUNT_FOR_AGE_UNDER_17,
+  DISCOUNT_FOR_COUPLE,
+  DISCOUNT_FOR_HALF_COUPLE,
+  DISCOUNT_FOR_SENIOR,
+  DISCOUNT_FOR_TRIP_DATE_30_PLUS,
+  DISCOUNT_FOR_TRIP_DATE_5_TO_30,
+  PRICE_AGE_BETWEEN_1_AND_4_YEARS_OLD,
+  PRICE_TRAIN_STROKE_DISCOUNT_CARD,
+} from './constants';
+import {
   ApiException,
   DiscountCard,
   InvalidTripInputException,
+  Passenger,
   TripRequest,
 } from './model/trip.request';
+import { calculateDaysDifference } from './utils';
 
 export class TrainTicketEstimator {
   protected async getPriceFromApi(from: string, to: string, when: Date): Promise<number> {
     throw new Error('Should not be call from a test');
   }
 
-  validTripRequestInput(tripRequest: TripRequest) {
+  private validTripRequestInput(tripRequest: TripRequest) {
     if (tripRequest.passengers.length === 0) {
       return 0;
     }
@@ -37,10 +51,61 @@ export class TrainTicketEstimator {
     });
   }
 
+  private getDiscountFromTripDate(tripDate: Date) {
+    const currentDate = new Date();
+    const thirtyDaysFromNow = new Date(currentDate.setDate(currentDate.getDate() + 30));
+    const fiveDaysAgo = new Date(currentDate.setDate(currentDate.getDate() - 30 + 5));
+
+    if (tripDate >= thirtyDaysFromNow) return DISCOUNT_FOR_TRIP_DATE_30_PLUS;
+    else if (tripDate > fiveDaysAgo) {
+      const diffDays = calculateDaysDifference(tripDate, new Date());
+      return (20 - diffDays) * DISCOUNT_FOR_TRIP_DATE_5_TO_30;
+    } else {
+      return 1;
+    }
+  }
+
+  private getDiscountFromAge(age: number) {
+    if (age <= 17) {
+      return DISCOUNT_FOR_AGE_UNDER_17;
+    } else if (age >= 70) {
+      return DISCOUNT_FOR_AGE_OVER_70;
+    } else {
+      return DISCOUNT_FOR_AGE_OTHER;
+    }
+  }
+
+  private getDiscountFromDiscountCard(passenger: Passenger, passengers: Passenger[]) {
+    let totalDiscount = 0;
+
+    if (passenger.discounts.includes(DiscountCard.Senior) && passenger.age >= 70) {
+      totalDiscount += DISCOUNT_FOR_SENIOR;
+    }
+
+    if (passengers.length == 2) {
+      const hasCoupleDiscoutCard = passengers.some((p) =>
+        p.discounts.includes(DiscountCard.Couple)
+      );
+      const areMajors = passengers.every((p) => p.age >= 18);
+
+      if (hasCoupleDiscoutCard && areMajors) totalDiscount += DISCOUNT_FOR_COUPLE;
+    }
+
+    if (
+      passengers.length == 1 &&
+      passenger.discounts.includes(DiscountCard.HalfCouple) &&
+      passenger.age > 18
+    ) {
+      totalDiscount += DISCOUNT_FOR_HALF_COUPLE;
+    }
+
+    return totalDiscount;
+  }
+
   async estimate(tripRequest: TripRequest): Promise<number> {
     this.validTripRequestInput(tripRequest);
 
-    let basePrice;
+    let basePrice: number;
     try {
       basePrice = await this.getPriceFromApi(
         tripRequest.details.from,
@@ -53,78 +118,37 @@ export class TrainTicketEstimator {
 
     const passengers = tripRequest.passengers;
     let totalPrice = 0;
-    let tmp = basePrice;
+    let tmp;
+
     for (let i = 0; i < passengers.length; i++) {
-      if (passengers[i].age < 1) {
-        continue;
-      } else if (passengers[i].age <= 17) {
-        tmp = basePrice * 0.6;
-      } else if (passengers[i].age >= 70) {
-        tmp = basePrice * 0.8;
-        if (passengers[i].discounts.includes(DiscountCard.Senior)) {
-          tmp -= basePrice * 0.2;
-        }
-      } else {
-        tmp = basePrice * 1.2;
-      }
-
-      const d = new Date();
-      if (tripRequest.details.when.getTime() >= d.setDate(d.getDate() + 30)) {
-        tmp -= basePrice * 0.2;
-      } else if (tripRequest.details.when.getTime() > d.setDate(d.getDate() - 30 + 5)) {
-        const date1 = tripRequest.details.when;
-        const date2 = new Date();
-        //https://stackoverflow.com/questions/43735678/typescript-get-difference-between-two-dates-in-days
-        const diff = Math.abs(date1.getTime() - date2.getTime());
-        const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
-
-        tmp += (20 - diffDays) * 0.02 * basePrice; // I tried. it works. I don't know why.
-      } else {
-        tmp += basePrice;
-      }
-
-      if (passengers[i].age > 0 && passengers[i].age < 4) {
-        tmp = 9;
-      }
-
-      if (passengers[i].discounts.includes(DiscountCard.TrainStroke)) {
-        tmp = 1;
-      }
-
-      totalPrice += tmp;
       tmp = basePrice;
-    }
+      const currentPassenger = passengers[i];
 
-    if (passengers.length == 2) {
-      let isCouple = false;
-      let isHalfCouple = false;
-      for (let i = 0; i < passengers.length; i++) {
-        if (passengers[i].discounts.includes(DiscountCard.Couple)) {
-          isCouple = true;
-        }
-        if (passengers[i].age < 18) {
-          isHalfCouple = true;
-        }
-      }
-      if (isCouple && !isHalfCouple) {
-        totalPrice -= basePrice * 0.2 * 2;
-      }
-    }
+      if (currentPassenger.age < 1) continue;
 
-    if (passengers.length == 1) {
-      let isCouple = false;
-      let isHalfCouple = false;
-      for (let i = 0; i < passengers.length; i++) {
-        if (passengers[i].discounts.includes(DiscountCard.HalfCouple)) {
-          isCouple = true;
-        }
-        if (passengers[i].age < 18) {
-          isHalfCouple = true;
-        }
+      const passengerIsBetween1And4YearsOld = currentPassenger.age > 0 && currentPassenger.age < 4;
+      const passengerHasTrainStroke = currentPassenger.discounts.includes(DiscountCard.TrainStroke);
+
+      if (passengerIsBetween1And4YearsOld || passengerHasTrainStroke) {
+        tmp = passengerIsBetween1And4YearsOld
+          ? PRICE_AGE_BETWEEN_1_AND_4_YEARS_OLD
+          : PRICE_TRAIN_STROKE_DISCOUNT_CARD;
+        totalPrice += tmp;
+        continue;
       }
-      if (isCouple && !isHalfCouple) {
-        totalPrice -= basePrice * 0.1;
-      }
+
+      const discountForAge = this.getDiscountFromAge(currentPassenger.age);
+      const discountForDate = this.getDiscountFromTripDate(tripRequest.details.when);
+      const discountForDiscountCard = this.getDiscountFromDiscountCard(
+        currentPassenger,
+        passengers
+      );
+
+      tmp +=
+        basePrice * discountForAge +
+        basePrice * discountForDate +
+        basePrice * discountForDiscountCard;
+      totalPrice += tmp;
     }
 
     return totalPrice;

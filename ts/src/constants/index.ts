@@ -1,0 +1,11 @@
+export const PRICE_AGE_BETWEEN_1_AND_4_YEARS_OLD = 9;
+export const PRICE_TRAIN_STROKE_DISCOUNT_CARD = 1;
+
+export const DISCOUNT_FOR_AGE_UNDER_17 = -0.4;
+export const DISCOUNT_FOR_AGE_OVER_70 = -0.2;
+export const DISCOUNT_FOR_AGE_OTHER = 0.2;
+export const DISCOUNT_FOR_TRIP_DATE_30_PLUS = -0.2;
+export const DISCOUNT_FOR_TRIP_DATE_5_TO_30 = 0.02;
+export const DISCOUNT_FOR_HALF_COUPLE = -0.1;
+export const DISCOUNT_FOR_COUPLE = -0.2;
+export const DISCOUNT_FOR_SENIOR = -0.2;
