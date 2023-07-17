@@ -1,15 +1,15 @@
 # Starter seed : Typescript - Jest
 
 Uses :
-* __Jest__ as unit testing engine and reporting engine
-* __ts-node__ to perform conversion from TS to JS
-* __prettier & ESLint__ for cleaner code
-* __Stryker__ as mutation testing engine
+
+- **Jest** as unit testing engine and reporting engine
+- **ts-node** to perform conversion from TS to JS
+- **prettier & ESLint** for cleaner code
+- **Stryker** as mutation testing engine
 
 ## Installation
 
 > npm i
-
 
 ## Running tests
 
@@ -23,6 +23,8 @@ The coverage is automatically run with `npm test`. You have a report directly in
 
 > npm test:mutation
 
-You need green tests to perform the mutation testing. 
+You need green tests to perform the mutation testing.
 
 The mutation report will be located in `reports/mutation/index.html`
+
+Just a test to check that this changed will be sign by my private key
